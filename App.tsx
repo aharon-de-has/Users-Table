@@ -1,149 +1,180 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, FlatList, TouchableOpacity, StyleSheet, Alert } from 'react-native';
-import Modal from 'react-native-modal';
-import UserForm from './UserForm';
+import React, { useState } from 'react';
+import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+
+const MAX_DIGITS_BEFORE_OPERATOR = 10; 
+const MAX_DIGITS_AFTER_OPERATOR = 11; 
+const MAX_RESULT_LENGTH = 22; 
 
 const App = () => {
-  const [users, setUsers] = useState([]);
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [isEditing, setIsEditing] = useState(false);
-  const [currentUser, setCurrentUser] = useState(null);
+  const [input, setInput] = useState('');
+  const [lastOperator, setLastOperator] = useState(false);
+  const [isResultDisplayed, setIsResultDisplay] = useState(false)
 
-  useEffect(() => {
-    fetchUsers();
-  }, []);
-
-  const fetchUsers = async () => {
-    try {
-      const response = await fetch('http://192.168.1.35:3000/users');
-      const data = await response.json();
-      setUsers(data);
-    } catch (error) {
-      console.error('Error fetching users:', error);
-    }
-  };
-
-  const addUser = async (user) => {
-    try {
-      const response = await fetch('http://192.168.1.35:3000/users', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(user),
-      });
-      const newUser = await response.json();
-      setUsers([...users, newUser]);
-      setIsModalOpen(false);
-    } catch (error) {
-      console.error('Error adding user:', error);
-    }
-  };
-
-  const updateUser = async (user) => {
-    try {
-      const response = await fetch(`http://192.168.1.35:3000/users/${currentUser.id}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(user),
-      });
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+  const handlePress = (value) => {
+	// Checks that the operator does not come before the operand and does it come after another operator
+    if (['+', '-', '*', '/'].includes(value)) {  
+      if (input.length > 0 && !lastOperator) {  
+        setInput(input + value);
+        setLastOperator(true);
+		    setIsResultDisplay(false);
       }
-      const updatedUser = await response.json();
-      setUsers(users.map(u => (u.id === currentUser.id ? updatedUser : u)));
-      setIsModalOpen(false);
-    } catch (error) {
-      console.error('Error updating user:', error);
-    }
-  };
-
-  const handleEdit = (user) => {
-    setCurrentUser(user);
-    setIsEditing(true);
-    setIsModalOpen(true);
-  };
-
-  const confirmDeleteUser = (id) => {
-    Alert.alert(
-      "Delete User",
-      "Are you sure you want to delete this user?",
-      [
-        {
-          text: "Cancel",
-        },
-        {
-          text: "OK",
-          onPress: () => deleteUser(id)
+	// If we use the +- button, we will check what the last number is
+    } else if (value === '+-' && !lastOperator) {
+      const lastOperatorIndex = Math.max(input.lastIndexOf('+'), input.lastIndexOf('-'), input.lastIndexOf('*'), input.lastIndexOf('/'));
+      let lastSegment = input.slice(lastOperatorIndex + 1);
+      let lastOperator = input[lastOperatorIndex];
+  
+      if (lastOperator === '+') {
+		// If the last operator is a plus, replace it with a minus
+        const updatedInput = input.slice(0, lastOperatorIndex) + '-' + lastSegment;
+        setInput(updatedInput);
+      } else if (lastOperator === '-') {
+		// If the last operator is a minus, replace it with a plus
+        const updatedInput = input.slice(0, lastOperatorIndex) + '+' + lastSegment;
+        setInput(updatedInput);
+      } else {
+        // If the last operator is double or division, add a minus after the last operator
+        if (lastSegment.startsWith('-')) {
+          // If the last number already starts with a minus, remove the minus
+          const updatedInput = input.slice(0, lastOperatorIndex + 1) + lastSegment.slice(1);
+          setInput(updatedInput);
+        } else {
+			// Add a minus after the last operator
+          const updatedInput = input.slice(0, lastOperatorIndex + 1) + '-' + lastSegment;
+          setInput(updatedInput);
         }
-      ],
-    );
-  };
-
-  const deleteUser = async (id) => {
-    try {
-      await fetch(`http://192.168.1.35:3000/users/${id}`, {
-        method: 'DELETE',
-      });
-      setUsers(users.filter(user => user.id !== id));
-    } catch (error) {
-      console.error('Error deleting user:', error);
-    }
-  };
-
-  const handleFormSubmit = (user) => {
-    if (isEditing) {
-      updateUser(user);
+      }
     } else {
-      addUser(user);
+      const currentDigitCount = input.replace(/[^0-9]/g, '').length;
+      const hasOperator = /[+\-*/]/.test(input); 
+	  
+
+	  if (isResultDisplayed && !['+', '-', '*', '/'].includes(value)) {
+		setInput(value);
+		setIsResultDisplay(false);
+	  } else if (hasOperator) {
+		if (currentDigitCount < MAX_DIGITS_AFTER_OPERATOR) {
+			setInput(input + value);
+			setLastOperator(false);
+		}
+	  } else {
+		if (input.length < MAX_DIGITS_BEFORE_OPERATOR || (input.length < MAX_DIGITS_BEFORE_OPERATOR + MAX_DIGITS_AFTER_OPERATOR)) {
+			setInput(input + value);
+			setLastOperator(value === '+' || value === '-' || value === '*' || value === '/');
+		}
+	  }
     }
+  };
+  // Resets the calculator
+  const handleClear = () => {
+    setInput('');
+    setLastOperator(false);
+	setIsResultDisplay(false);
+  };
+
+  const calculate = (expression) => {
+    try {
+		// Handle percentages
+      const percentageExpression = expression
+        .replace(/(\d+)\s*([+\-/])\s*(\d+)%/g, (match, p1, operator, p2) => {
+          // Calculate percentages
+          const percentageValue = p2 / 100 * parseFloat(p1);
+          return `${p1} ${operator} ${percentageValue}`;
+        })
+        .replace(/(\d+)%/g, (match, p1) => `* (${p1} / 100)`);
+      if (percentageExpression.trim() === '') {
+        return 'Error';
+      }
+
+      const result = new Function('return ' + percentageExpression)();
+      
+      const resultString = result.toString();
+      return resultString.length > MAX_RESULT_LENGTH
+        ? resultString.slice(0, MAX_RESULT_LENGTH) // Correction: cutting the result from the left and not the right
+        : resultString;
+    } catch (e) {
+      return 'Error';
+    }
+  };
+
+  const handleEqual = () => {
+    setInput(calculate(input));
+    setLastOperator(false);
+	setIsResultDisplay(true);
   };
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Welcome</Text>
-      <View style={styles.headerRow}>
-        <Text style={styles.headerCell}>First Name</Text>
-        <Text style={styles.headerCell}>Last Name</Text>
-        <Text style={styles.headerCell}>Phone Number</Text>
-        <Text style={styles.headerCell}>Email</Text>
-        <Text style={styles.headerCell}>Role</Text>
-        <Text style={styles.headerCell}></Text>
+      <View style={styles.displayContainer}>
+        <Text style={styles.displayText}>{input}</Text>
       </View>
-      <FlatList
-        data={users}
-        keyExtractor={(item) => item.id.toString()}
-        renderItem={({ item, index }) => (
-          <View style={[styles.row,  { backgroundColor: index % 2 === 0 ? '#ffffff' : '#c2d6ed' }]}>
-            <Text style={styles.cell}>{item.firstName}</Text>
-            <Text style={styles.cell}>{item.lastName}</Text>
-            <Text style={styles.cell}>{item.phoneNumber}</Text>
-            <Text style={styles.cell}>{item.email}</Text>
-            <Text style={styles.cell}>{item.role}</Text>
-            <TouchableOpacity style={styles.editButton} onPress={() => handleEdit(item)}>
-              <Text style={styles.editButtonText}>Edit</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.deleteButton} onPress={() => confirmDeleteUser(item.id)}>
-              <Text style={styles.deleteButtonText}>Del</Text>
-            </TouchableOpacity>
-          </View>
-        )}
-      />
-      <TouchableOpacity style={styles.addButton} onPress={() => { setCurrentUser(null); setIsEditing(false); setIsModalOpen(true); }}>
-        <Text style={styles.addButtonText}>Add User</Text>
-      </TouchableOpacity>
-      <Modal isVisible={isModalOpen} onBackdropPress={() => setIsModalOpen(false)}>
-        <View style={styles.modalContent}>
-          <UserForm 
-            onSubmit={handleFormSubmit} 
-            onCancel={() => setIsModalOpen(false)} 
-            initialValues={currentUser} 
-            isEditing={isEditing} 
-          />
-        </View>
-      </Modal>
+      <View style={styles.row}>
+        <TouchableOpacity style={styles.button} onPress={handleClear}>
+          <Text style={styles.buttonText}>C</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.button} onPress={() => handlePress('+-')}>
+          <Text style={styles.buttonText}>+/-</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.button} onPress={() => handlePress('%')}>
+          <Text style={styles.buttonText}>%</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.button} onPress={() => handlePress('/')}>
+          <Text style={styles.buttonText}>/</Text>
+        </TouchableOpacity>
+      </View>
+      <View style={styles.row}>
+        <TouchableOpacity style={styles.button} onPress={() => handlePress('7')}>
+          <Text style={styles.buttonText}>7</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.button} onPress={() => handlePress('8')}>
+          <Text style={styles.buttonText}>8</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.button} onPress={() => handlePress('9')}>
+          <Text style={styles.buttonText}>9</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.button} onPress={() => handlePress('*')}>
+          <Text style={styles.buttonText}>X</Text>
+        </TouchableOpacity>
+      </View>
+      <View style={styles.row}>
+        <TouchableOpacity style={styles.button} onPress={() => handlePress('4')}>
+          <Text style={styles.buttonText}>4</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.button} onPress={() => handlePress('5')}>
+          <Text style={styles.buttonText}>5</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.button} onPress={() => handlePress('6')}>
+          <Text style={styles.buttonText}>6</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.button} onPress={() => handlePress('-')}>
+          <Text style={styles.buttonText}>-</Text>
+        </TouchableOpacity>
+      </View>
+      <View style={styles.row}>
+        <TouchableOpacity style={styles.button} onPress={() => handlePress('1')}>
+          <Text style={styles.buttonText}>1</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.button} onPress={() => handlePress('2')}>
+          <Text style={styles.buttonText}>2</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.button} onPress={() => handlePress('3')}>
+          <Text style={styles.buttonText}>3</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.button} onPress={() => handlePress('+')}>
+          <Text style={styles.buttonText}>+</Text>
+        </TouchableOpacity>
+      </View>
+      <View style={styles.row}>
+        <TouchableOpacity style={styles.button} onPress={() => handlePress('0')}>
+          <Text style={styles.buttonText}>0</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.button} onPress={() => handlePress('.')}>
+          <Text style={styles.buttonText}>.</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.equalButton} onPress={handleEqual}>
+          <Text style={styles.buttonText}>=</Text>
+        </TouchableOpacity>
+      </View>
     </View>
   );
 };
@@ -151,77 +182,53 @@ const App = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#1e1e1e',
     padding: 10,
-  },
-  title: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    marginBottom: 20,
-    textAlign: 'center',
-  },
-  headerRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    padding: 25,
-    backgroundColor: '#79afd1',
-    borderBottomWidth: 7,
+    borderColor: '#0000ff',
+    borderWidth: 5,
     borderRadius: 10,
   },
-  headerCell: {
-    flex: 1,
-    fontWeight: 'bold',
+  displayContainer: {
+    backgroundColor: '#00a000',
+    width: '90%',
+    padding: 20,
+    borderRadius: 10,
+    marginBottom: 20,
+  },
+  displayText: {
+    fontSize: 48,
+    color: 'white',
+    textAlign: 'right',
   },
   row: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    padding: 10,
-    borderBottomWidth: 1,
+    width: '90%',
+    marginBottom: 10,
   },
-  cell: {
+  button: {
+    backgroundColor: '#f569bf',
+    padding: 20,
+    borderRadius: 50,
+    alignItems: 'center',
+    justifyContent: 'center',
     flex: 1,
-    fontSize: 14,
-    // fontWeight: 'bold',
+    margin: 5,
   },
-  editButton: {
-    backgroundColor: '#f2cb30',
-    padding: 10,
-    borderRadius: 10,
-    marginRight: 10,
+  equalButton: {
+    backgroundColor: '#ff0000',
+    padding: 20,
+    borderRadius: 50,
     alignItems: 'center',
+    justifyContent: 'center',
+    flex: 3.5,
+    margin: 5,
   },
-  editButtonText: {
-    fontWeight: 'bold',
-    color: 'white',
-  },
-  deleteButton: {
-    backgroundColor: '#ff6f61',
-    padding: 10,
-    borderRadius: 10,
-    alignItems: 'center',
-  },
-  deleteButtonText: {
-    fontWeight: 'bold',
-    color: 'white',
-  },
-  addButton: {
-    backgroundColor: '#79afd1',
-    padding: 15,
-    borderRadius: 20,
-    alignItems: 'center',
-    fontSize: 34,
-    fontWeight: 'bold',
-  },
-  addButtonText: {
+  buttonText: {
     color: 'white',
     fontSize: 24,
-    fontWeight: 'bold',
-  },
-  modalContent: {
-    backgroundColor: 'white',
-    padding: 22,
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderRadius: 40,
   },
 });
 
