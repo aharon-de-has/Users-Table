@@ -1,13 +1,23 @@
-import React, { useState } from 'react';
-import { View, TextInput, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, TextInput, Text, TouchableOpacity, StyleSheet, Alert } from 'react-native';
+import { Picker } from '@react-native-picker/picker';
 
-
-const UserForm = ({ onSubmit, onCancel }) => {
+const UserForm = ({ onSubmit, onCancel, initialValues, isEditing }) => {
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [phoneNumber, setPhoneNumber] = useState('');
   const [email, setEmail] = useState('');
   const [role, setRole] = useState('');
+
+  useEffect(() => {
+    if (initialValues) {
+      setFirstName(initialValues.firstName || '');
+      setLastName(initialValues.lastName || '');
+      setPhoneNumber(initialValues.phoneNumber || '');
+      setEmail(initialValues.email || '');
+      setRole(initialValues.role || '');
+    }
+  }, [initialValues]);
 
   const validateForm = () => {
     const nameRegex = /^[A-Za-z]+$/;
@@ -15,29 +25,29 @@ const UserForm = ({ onSubmit, onCancel }) => {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
     if (firstName.trim() !== '' && !nameRegex.test(firstName)) {
-      alert('First Name must contain only letters.');
+      Alert.alert('Validation Error', 'First Name must contain only letters.');
       return false;
     }
 
     if (lastName.trim() !== '' && !nameRegex.test(lastName)) {
-      alert('Last Name must contain only letters.');
+      Alert.alert('Validation Error', 'Last Name must contain only letters.');
       return false;
     }
 
     if (phoneNumber.trim() !== '' && !phoneRegex.test(phoneNumber)) {
-      alert('Phone Number must contain only numbers.');
+      Alert.alert('Validation Error', 'Phone Number must contain only numbers.');
       return false;
     }
 
     if (email.trim() !== '' && !emailRegex.test(email)) {
-      alert('Email is not valid.');
+      Alert.alert('Validation Error', 'Email is not valid.');
       return false;
     }
 
-    // if (role.trim() === '') {
-    //   alert('Role must be selected.');
-    //   return false;
-    // }
+    if (!role || (role !== 'Manager' && role !== 'Waiter')) {
+      Alert.alert('Validation Error', 'Role must be "Manager" or "Waiter".');
+      return false;
+    }
 
     return true;
   };
@@ -67,7 +77,6 @@ const UserForm = ({ onSubmit, onCancel }) => {
         value={phoneNumber}
         onChangeText={setPhoneNumber}
         style={styles.input}
-        keyboardType="numeric"
       />
       <TextInput
         placeholder="Email"
@@ -75,18 +84,23 @@ const UserForm = ({ onSubmit, onCancel }) => {
         onChangeText={setEmail}
         style={styles.input}
       />
-          <TextInput
-        placeholder="Role (Manager/Waiter)"
-        value={role}
-        onChangeText={setRole}
-        style={styles.input}
-      />
-      <View style={styles.row}>
+      <View style={styles.pickerContainer}>
+        <Picker
+          selectedValue={role}
+          onValueChange={(itemValue) => setRole(itemValue)}
+          style={styles.picker}
+        >
+          <Picker.Item label="Select Role" value="" />
+          <Picker.Item label="Manager" value="Manager" />
+          <Picker.Item label="Waiter" value="Waiter" />
+        </Picker>
+      </View>
+      <View style={styles.buttonRow}>
+        <TouchableOpacity style={styles.saveButton} onPress={handleSubmit}>
+          <Text style={styles.saveButtonText}>{isEditing ? 'Update' : 'Save'}</Text>
+        </TouchableOpacity>
         <TouchableOpacity style={styles.cancelButton} onPress={onCancel}>
           <Text style={styles.cancelButtonText}>Cancel</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.saveButton} onPress={handleSubmit}>
-          <Text style={styles.saveButtonText}>Save</Text>
         </TouchableOpacity>
       </View>
     </View>
@@ -104,61 +118,44 @@ const styles = StyleSheet.create({
     marginBottom: 10,
     padding: 10,
   },
-  row: {
+  pickerContainer: {
+    borderColor: 'blue',
+    borderWidth: 1,
+    borderRadius: 5,
+    marginBottom: 10,
+  },
+  picker: {
+    height: 50,
+    width: '100%',
+  },
+  buttonRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    padding: 10,
+    width: '100%',
   },
   saveButton: {
-    backgroundColor: '#7bb5db',
+    backgroundColor: '#79afd1',
     padding: 10,
     borderRadius: 10,
-    // fontSize: 14,
+    flex: 1,
+    marginRight: 10,
+    alignItems: 'center',
+  },
+  saveButtonText: {
     fontWeight: 'bold',
+    color: 'white',
   },
   cancelButton: {
-    backgroundColor: '#7bb5db',
+    backgroundColor: '#ff6f61',
     padding: 10,
     borderRadius: 10,
-    // fontSize: 14,
-    fontWeight: 'bold',
+    flex: 1,
+    alignItems: 'center',
   },
   cancelButtonText: {
-      fontSize: 14,
-      fontWeight: 'bold',
-    },
-  saveButtonText: {
-      fontSize: 14,
-      fontWeight: 'bold',
-    },
+    fontWeight: 'bold',
+    color: 'white',
+  },
 });
 
 export default UserForm;
-
-
-
-{/* <View style={styles.dropdownContainer}>
-        <SelectDropdown
-          data={['Manager', 'Waiter']}
-          onSelect={(selectedItem) => {
-            setRole(selectedItem);
-          }}
-          buttonTextAfterSelection={(selectedItem) => selectedItem}
-          rowTextForSelection={(item) => item}
-          defaultButtonText="Select a role"
-          buttonStyle={styles.dropdownButton}
-          buttonTextStyle={styles.dropdownButtonText}
-          dropdownStyle={styles.dropdownDropdown}
-          rowStyle={styles.dropdownRow}
-          rowTextStyle={styles.dropdownRowText}
-        />
-      </View>
-      <View style={styles.buttonContainer}>
-        <TouchableOpacity style={styles.saveButton} onPress={handleSubmit}>
-          <Text style={styles.saveButtonText}>Save</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.cancelButton} onPress={onCancel}>
-          <Text style={styles.cancelButtonText}>Cancel</Text>
-        </TouchableOpacity>
-      </View>
-    </View> */}
