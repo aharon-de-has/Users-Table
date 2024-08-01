@@ -10,9 +10,8 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true })); 
 
 
-// db.serialize(() => {
 db.run('CREATE TABLE IF NOT EXISTS users (id INTEGER PRIMARY KEY, firstName TEXT, lastName TEXT, phoneNumber TEXT, email TEXT, role TEXT)');
-// });
+
 
 // Get all users
 app.get('/users', (req, res) => {
@@ -40,6 +39,7 @@ app.post('/users', (req, res) => {
     );
 });
 
+// update a user
 app.put('/users/:id', (req, res) => {
     const { id } = req.params;
     const { firstName, lastName, phoneNumber, email, role } = req.body;
@@ -67,7 +67,7 @@ app.delete('/users/:id', (req, res) => {
     });
 });
 
-// התחלת השרת
+// Starting the server
 const PORT = 3000;
 app.listen(PORT, () => {
     console.log(`Server is running on loclhost:${PORT}`);
