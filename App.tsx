@@ -6,11 +6,21 @@ import UserForm from './UserForm';
 const IP = '192.168.1.35'
 const URL = `http://${IP}:3000/users`
 
+type User = {
+  id: string;
+  firstName: string;
+  lastName: string;
+  phoneNumber: string;
+  email: string;
+  role: string;
+}
+
+
 const App = () => {
-  const [users, setUsers] = useState([]);
+  const [users, setUsers] = useState <User[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
-  const [currentUser, setCurrentUser] = useState(null);
+  const [currentUser, setCurrentUser] = useState <User | null>(null);
 
   useEffect(() => {
     fetchUsers();
@@ -26,7 +36,7 @@ const App = () => {
     }
   };
 
-  const addUser = async (user) => {
+  const addUser = async (user: User) => {
     try {
       const response = await fetch(URL, {
         method: 'POST',
@@ -43,7 +53,7 @@ const App = () => {
     }
   };
 
-  const updateUser = async (user) => {
+  const updateUser = async (user: User) => {
     try {
       const response = await fetch(`${URL}/${currentUser.id}`, {
         method: 'PUT',
@@ -63,13 +73,13 @@ const App = () => {
     }
   };
 
-  const handleEdit = (user) => {
+  const handleEdit = (user: User) => {
     setCurrentUser(user);
     setIsEditing(true);
     setIsModalOpen(true);
   };
 
-  const confirmDeleteUser = (id) => {
+  const confirmDeleteUser = (id: string) => {
     Alert.alert(
       "Delete User",
       "Are you sure you want to delete this user?",
@@ -85,7 +95,7 @@ const App = () => {
     );
   };
 
-  const deleteUser = async (id) => {
+  const deleteUser = async (id: string) => {
     try {
       await fetch(`${URL}/${id}`, {
         method: 'DELETE',
@@ -96,13 +106,45 @@ const App = () => {
     }
   };
 
-  const handleFormSubmit = (user) => {
+  const handleFormSubmit = (user: User) => {
     if (isEditing) {
       updateUser(user);
     } else {
       addUser(user);
     }
   };
+
+  const sortData = (data, sortBy) => {
+    if (sortBy === 'firstName') {
+      return data.sort((a, b) => a.firstName.localeCompare(b.firstName));
+    } else if (sortBy === 'lastName') {
+      return data.sort((a, b) => a.lastName.localeCompare(b.lastName));
+    }
+    return data;
+  };
+
+  const SortBy = (sortBy) => {
+    const sortedUsers = sortData([...users], sortBy);  // Make a copy of the users array and sort it
+    setUsers(sortedUsers);
+  };
+
+  const sort = () => {
+    Alert.alert(
+      "sort by",
+      "choose",
+      [
+        {
+          text: "first name",
+          onPress: () => SortBy('firstName')
+        },
+        {
+          text: "last name",
+          onPress: () => SortBy('lastName')
+        }
+      ],
+    );
+  };
+  
 
   return (
     <View style={styles.container}>
@@ -134,19 +176,24 @@ const App = () => {
           </View>
         )}
       />
-      <TouchableOpacity style={styles.addButton} onPress={() => { setCurrentUser(null); setIsEditing(false); setIsModalOpen(true); }}>
-        <Text style={styles.addButtonText}>Add User</Text>
-      </TouchableOpacity>
-      <Modal isVisible={isModalOpen} onBackdropPress={() => setIsModalOpen(false)}>
-        <View style={styles.modalContent}>
-          <UserForm 
-            onSubmit={handleFormSubmit} 
-            onCancel={() => setIsModalOpen(false)} 
-            initialValues={currentUser} 
-            isEditing={isEditing} 
-          />
-        </View>
-      </Modal>
+      <View style={styles.buttonRow}>
+        <TouchableOpacity style={styles.addButton} onPress={() => sort() }>
+          <Text style={styles.addButtonText}>Sort</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.addButton} onPress={() => { setCurrentUser(null); setIsEditing(false); setIsModalOpen(true); }}>
+          <Text style={styles.addButtonText}>Add User</Text>
+        </TouchableOpacity>
+        <Modal isVisible={isModalOpen} onBackdropPress={() => setIsModalOpen(false)}>
+          <View style={styles.modalContent}>
+            <UserForm 
+              onSubmit={handleFormSubmit} 
+              onCancel={() => setIsModalOpen(false)} 
+              initialValues={currentUser} 
+              isEditing={isEditing} 
+            />
+          </View>
+        </Modal>
+      </View>
     </View>
   );
 };
@@ -183,7 +230,6 @@ const styles = StyleSheet.create({
   cell: {
     flex: 1,
     fontSize: 14,
-    // fontWeight: 'bold',
   },
   editButton: {
     backgroundColor: '#f2cb30',
@@ -208,11 +254,13 @@ const styles = StyleSheet.create({
   },
   addButton: {
     backgroundColor: '#79afd1',
-    padding: 15,
+    paddingVertical: 15,
+    paddingHorizontal: 30,
+    marginHorizontal: 5,
     borderRadius: 20,
     alignItems: 'center',
-    fontSize: 34,
-    fontWeight: 'bold',
+    justifyContent: 'center',
+    width: '45%',  
   },
   addButtonText: {
     color: 'white',
@@ -225,6 +273,13 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     borderRadius: 40,
+  },
+  buttonRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    // width: '100%',
+    marginVertical: 10,
   },
 });
 

@@ -10,7 +10,7 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true })); 
 
 
-db.run('CREATE TABLE IF NOT EXISTS users (id INTEGER PRIMARY KEY, firstName TEXT, lastName TEXT, phoneNumber TEXT, email TEXT, role TEXT)');
+// db.run('CREATE TABLE IF NOT EXISTS users (id INTEGER PRIMARY KEY, firstName TEXT, lastName TEXT, phoneNumber TEXT, email TEXT, role TEXT)');
 
 
 // Get all users

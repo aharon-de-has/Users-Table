@@ -21,31 +21,25 @@ const UserForm = ({ onSubmit, onCancel, initialValues, isEditing }) => {
 
   const validateForm = () => {
     const nameRegex = /^[A-Za-z]+$/;
-    const phoneRegex = /^[0-9]+$/;
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-    if (firstName.trim() !== '' && !nameRegex.test(firstName)) {
-      Alert.alert('Validation Error', 'First Name must contain only letters.');
+    if (!nameRegex.test(firstName)) {
+      Alert.alert('Validation Error', 'First Name must contain only letters and cannot be empty.');
       return false;
     }
 
-    if (lastName.trim() !== '' && !nameRegex.test(lastName)) {
-      Alert.alert('Validation Error', 'Last Name must contain only letters.');
+    if (!nameRegex.test(lastName)) {
+      Alert.alert('Validation Error', 'Last Name must contain only letters and cannot be empty.');
       return false;
     }
 
-    if (phoneNumber.trim() !== '' && !phoneRegex.test(phoneNumber)) {
-      Alert.alert('Validation Error', 'Phone Number must contain only numbers.');
+    if (!emailRegex.test(email)) {
+      Alert.alert('Validation Error', 'Email is not valid and cannot be empty.');
       return false;
     }
 
-    if (email.trim() !== '' && !emailRegex.test(email)) {
-      Alert.alert('Validation Error', 'Email is not valid.');
-      return false;
-    }
-
-    if (!role || (role !== 'Manager' && role !== 'Waiter')) {
-      Alert.alert('Validation Error', 'Role must be "Manager" or "Waiter".');
+    if (!role) {
+      Alert.alert('Validation Error', 'Role is required.');
       return false;
     }
 
@@ -76,12 +70,14 @@ const UserForm = ({ onSubmit, onCancel, initialValues, isEditing }) => {
         placeholder="Phone Number"
         value={phoneNumber}
         onChangeText={setPhoneNumber}
+        keyboardType='numeric'
         style={styles.input}
       />
       <TextInput
         placeholder="Email"
         value={email}
         onChangeText={setEmail}
+        keyboardType='email-address'
         style={styles.input}
       />
       <View style={styles.pickerContainer}>
